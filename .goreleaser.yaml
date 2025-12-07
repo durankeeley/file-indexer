@@ -1,0 +1,46 @@
+version: 2
+project_name: filesearcher
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: my-build
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    hooks:
+      post: chmod +x "{{ .Path }}"
+
+archives:
+  - id: my-archive
+    formats:
+      - binary
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+checksum:
+  name_template: 'checksums.txt'
+
+signs:
+
+  - id: sign-checksums
+    artifacts: checksum
+    args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
+
+  - id: sign-binaries
+    ids:
+      - my-archive
+    args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
